@@ -1,4 +1,7 @@
-﻿vkC1::MsgBox G1
+﻿; Author: Chaoses Ib
+; https://github.com/Chaoses-Ib/IbLogitechGamingSoftwareExt
+
+vkC1::MsgBox G1
 vkC2::MsgBox G2
 vkC3::MsgBox G3
 vkC4::MsgBox G4
