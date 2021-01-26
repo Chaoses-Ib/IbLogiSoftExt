@@ -12,7 +12,7 @@ An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/ar
 1. Install [Logitech Gaming Software](https://support.logi.com/hc/en-gb/articles/360025298053-Logitech-Gaming-Software), exit it (via tray icon).
 1. Put winmm.dll into C:\Program Files\Logitech Gaming Software .
 1. Restart Logitech Gaming Software, turn on Automatic Game Detection mode.
-1. Run RemappingTest.ahk to test the remapping.
+1. Run [RemappingTest.ahk](RemappingTest.ahk) to test the remapping.
 
 ## Credits
 This project uses the following libraries:
