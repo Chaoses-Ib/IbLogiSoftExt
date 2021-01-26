@@ -38,7 +38,22 @@ class LogitechMouseExt {
             default: return L"";
             };
         }();
-        DebugOutput(wstringstream() << event_str << L"("<<event<<L")" << L", " << *args->arg);
+        DebugOutput(wstringstream() << event_str << L"(" << event << L")" << L", " << *args->arg);
+
+        //Remap G-keys
+        if (event == 10 || event == 11) {
+            INPUT input;
+            input.type = INPUT_KEYBOARD;
+            input.ki = {
+                WORD(0xC0 + *args->arg),
+                0,
+                DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
+                0,
+                (ULONG_PTR)GetMessageExtraInfo()
+            };
+            SendInput(1, &input, sizeof INPUT);
+        }
+
         LuaDispatchEvent(a1, a2, event, args); //even doesn't call can't stop
     }
     static inline decltype(LuaDispatchEventDetour)* LuaDispatchEvent;
@@ -85,6 +100,10 @@ class LogitechMouseExt {
             );
         }
         
+        //Remap G-keys
+        if (a3 == 14 || a3 == 15)
+            return;
+
         EventFunc13_GButton(a1, a2, a3, a4);
     }
     static inline decltype(EventFunc13_GButtonDetour)* EventFunc13_GButton;
