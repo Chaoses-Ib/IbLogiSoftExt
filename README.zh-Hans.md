@@ -11,8 +11,9 @@
 ## 已测试设备
 设备   | 说明
 ------ | -----------
-G600   | G6\~G20 正常；G1\~G5 需要特殊设置，或者使用 LButton、RButton、MButton、XButton1 和 XButton2 代替
+G600   | G6\~G20 正常；G1\~G5 需要一些特殊设置，或者使用 XButton1 和 XButton2 代替
 G300s  | G4\~G9 正常
+（如果没有说明的话，G1\~G3 需要一些特殊设置才能工作，不过推荐使用 LButton、RButton 和 MButton 代替）
 
 ## 安装
 1. 安装 [Logitech 游戏软件](https://support.logi.com/hc/zh-cn/articles/360025298053)，通过托盘图标退出。
