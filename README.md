@@ -13,6 +13,7 @@ Device | Description
 ------ | -----------
 G600   | G6\~G20 work; G4\~G5 need some special settings, or use XButton1 and XButton2 instead
 G300s  | G4\~G9 work
+
 (If not mentioned, G1\~G3 need some special settings to work, but it's recommended to use LButton, RButton and MButton instead)
 
 ## Installation
