@@ -1,6 +1,12 @@
 ﻿; Author: Chaoses Ib
 ; https://github.com/Chaoses-Ib/IbLogitechGamingSoftwareExt
 
+;LButton::MsgBox LButton
+;RButton::MsgBox RButton
+;MButton::MsgBox MButton
+XButton1::MsgBox XButton1
+XButton2::MsgBox XButton2
+
 vkC1::MsgBox G1
 vkC2::MsgBox G2
 vkC3::MsgBox G3
