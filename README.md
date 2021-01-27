@@ -8,6 +8,11 @@ An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/ar
 ## Supported Version
 * Logitech Gaming Software 9.02.65 64-bit
 
+## Tested Devices
+Device | Description
+------ | -----------
+G600   | G6~G20 work; G1~G5 need special setting, or use LButton, RButton, MButton, XButton1 and XButton2 instead.
+
 ## Installation
 1. Install [Logitech Gaming Software](https://support.logi.com/hc/en-gb/articles/360025298053-Logitech-Gaming-Software), exit it (via tray icon).
 1. Put winmm.dll into C:\Program Files\Logitech Gaming Software .
