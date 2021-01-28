@@ -41,3 +41,4 @@ This project uses the following libraries:
 
 * [Detours](https://github.com/microsoft/detours)
 * [[Boost::ext].DI](https://github.com/boost-ext/di)
+* [yaml-cpp](https://github.com/jbeder/yaml-cpp)
