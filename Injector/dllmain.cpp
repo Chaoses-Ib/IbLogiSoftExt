@@ -3,6 +3,7 @@
 #include <optional>
 #include "Boost/di.hpp"
 #include "helper.hpp"
+#include "yaml-cpp/yaml.h"
 
 namespace di = boost::di;
 
@@ -11,6 +12,10 @@ struct QString {
 };
 
 class LogitechMouseExt {
+    static inline struct {
+        bool RemapG123;
+    } config;
+
     struct args
     {
         DWORD* pdword0;
@@ -42,16 +47,23 @@ class LogitechMouseExt {
 
         //Remap G-keys
         if (event == 10 || event == 11) {
-            INPUT input;
-            input.type = INPUT_KEYBOARD;
-            input.ki = {
-                WORD(0xC0 + *args->arg),
-                0,
-                DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
-                0,
-                (ULONG_PTR)GetMessageExtraInfo()
-            };
-            SendInput(1, &input, sizeof INPUT);
+            [&] {
+                uint32_t gkey = *args->arg;
+                if (!config.RemapG123 && 1 <= gkey && gkey <= 3)
+                    //do nothing when it's G123
+                    return;
+
+                INPUT input;
+                input.type = INPUT_KEYBOARD;
+                input.ki = {
+                    WORD(0xC0 + gkey),
+                    0,
+                    DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
+                    0,
+                    (ULONG_PTR)GetMessageExtraInfo()
+                };
+                SendInput(1, &input, sizeof INPUT);
+            }();
         }
 
         LuaDispatchEvent(a1, a2, event, args); //even doesn't call can't stop
@@ -101,14 +113,33 @@ class LogitechMouseExt {
         }
         
         //Remap G-keys
-        if (a3 == 14 || a3 == 15)
-            return;
+        if (a3 == 14 || a3 == 15) {
+            if (config.RemapG123)
+                return;
+            else
+                //return when isn't G123
+                if (!(1 <= *a4->gbutton && *a4->gbutton <= 3))
+                    return;
+        }
 
         EventFunc13_GButton(a1, a2, a3, a4);
     }
     static inline decltype(EventFunc13_GButtonDetour)* EventFunc13_GButton;
 public:
     LogitechMouseExt() {
+        //Get config
+        config.RemapG123 = false;
+
+        YAML::Node yaml;
+        try {
+            yaml = YAML::LoadFile("winmm.dll.yaml");
+        }
+        catch (const YAML::BadFile&) { }
+
+        if (yaml["Mouse"]["RemapG123"])
+            config.RemapG123 = yaml["Mouse"]["RemapG123"].as<bool>();
+
+        //Attach
         Module LCore = *makeModule::CurrentProcess();
         LuaDispatchEvent = LCore.base.offset(0x71CC40);
         //DebugOutput(wstringstream() << LuaDispatchEvent);
