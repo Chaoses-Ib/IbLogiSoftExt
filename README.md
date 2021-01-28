@@ -23,6 +23,18 @@ G300s  | G4\~G9 work
 1. Restart Logitech Gaming Software, turn on Automatic Game Detection mode.
 1. Run [RemappingTest.ahk](RemappingTest.ahk)(included in the release files) to test the remapping.
 
+## Configuration
+If you don't like the default behavior, you can modify it by following the steps below:
+1. Create winmm.dll.yaml in the same directory the winmm.dll in.
+1. Refer to the following content to edit it:
+```yaml
+# YAML
+Mouse:
+  # Whether or not to remap G1~G3. Sometimes may cause problems if turned on.
+  RemapG123: false
+```
+(UTF-8 encoding)
+
 ## Credits
 This project uses the following libraries:
 

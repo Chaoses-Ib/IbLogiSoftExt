@@ -23,6 +23,18 @@ G300s  | G4\~G9 正常
 1. 重新启动 Logitech 游戏软件，开启自动游戏检测模式。
 1. 运行 [RemappingTest.ahk](RemappingTest.ahk)（包含在发行文件中）来测试重映射。
 
+## 配置
+如果你不喜欢默认行为，你可以通过以下步骤来修改它：
+1. 在 winmm.dll 的相同目录下创建 winmm.dll.yaml。
+1. 参考以下内容进行编辑：
+```yaml
+# YAML
+Mouse:
+  # 是否重映射G1~G3。如果开启有时可能会出现问题。
+  RemapG123: false
+```
+（UTF-8 编码）
+
 ## 鸣谢
 本项目使用了以下库：
 
