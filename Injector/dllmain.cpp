@@ -4,6 +4,7 @@
 #include "Boost/di.hpp"
 #include "helper.hpp"
 #include "yaml-cpp/yaml.h"
+#include "AHK.hpp"
 
 namespace di = boost::di;
 
@@ -60,7 +61,7 @@ class LogitechMouseExt {
                     0,
                     DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
                     0,
-                    (ULONG_PTR)GetMessageExtraInfo()
+                    (ULONG_PTR)GetMessageExtraInfo() | AHK::KEY_PHYS_IGNORE  //Make AHK consider it as phsical keystroke
                 };
                 SendInput(1, &input, sizeof INPUT);
             }();
