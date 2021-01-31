@@ -5,7 +5,7 @@ An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/ar
 ## Features
 * Remap G-keys to virtual-key codes (vkC0 + n), so that them can be detected by [AutoHotkey](https://www.autohotkey.com/), which enables you to:
   * Use the more professional AHK to perform hotkey actions instead of Lua.
-  * Detect when your G-keys have been double-pressed, triple-pressed or long-pressed.
+  * Detect when your G-keys have been double-pressed, triple-pressed or long-pressed. ([#2](../../issues/2))
   * Make your G-keys context-sensitive (perform different actions depending on specific conditions, such as different processes and windows). It's more configurable than LGS's Automatic Game Detection.
 
 ## Supported Version
