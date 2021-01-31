@@ -3,7 +3,10 @@
 一个 [Logitech 游戏软件](https://support.logi.com/hc/zh-cn/articles/360025298053) 的扩展。
 
 ## 功能
-* 将G键重映射为虚拟键码（vkC0 + n），从而使 [AutoHotkey](https://www.autohotkey.com/) 可以接收到G键。
+* 将G键重映射为虚拟键码（vkC0 + n），从而使 [AutoHotkey](https://www.autohotkey.com/) 可以检测到G键。这样你就可以：
+  * 使用比Lua更专业的AHK来执行热键动作。
+  * 检测G键的双击、三击和长按。
+  * 让G键上下文敏感（根据不同条件执行不同动作，比如不同的进程和窗口）。比LGS的自动游戏检测具有更强的可配置性。
 
 ## 支持版本
 * Logitech 游戏软件 9.02.65 64位
