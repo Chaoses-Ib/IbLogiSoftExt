@@ -5,8 +5,9 @@ An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/ar
 ## Features
 * Remap G-keys to virtual-key codes (vkC0 + n), so that them can be detected by [AutoHotkey](https://www.autohotkey.com/), which enables you to:
   * Use the more professional AHK to perform hotkey actions instead of Lua.
-  * Detect when your G-keys have been double-pressed, triple-pressed or long-pressed. ([#2](../../issues/2))
+  * Detect when your G-keys have been double-pressed, triple-pressed or long-pressed. (Remember to use "L" option when call KeyWait. [#2](../../issues/2))
   * Make your G-keys context-sensitive (perform different actions depending on specific conditions, such as different processes and windows). It's more configurable than LGS's Automatic Game Detection.
+  * Define custom combinations of G-keys as hotkeys. (Just like G-Shift, but more powerful) ([#2](../../issues/2))
 
 ## Supported Version
 * Logitech Gaming Software 9.02.65 64-bit
@@ -34,8 +35,11 @@ If you don't like the default behavior, you can modify it by following the steps
 ```yaml
 # YAML
 Mouse:
-  # Whether or not to remap G1~G3. Sometimes may cause problems if turned on.
+  # Whether or not to remap G1~G3. Sometimes may cause problems if turned on. (#1)
   RemapG123: false
+AHK:
+  # Make AHK consider the sent VKs as physical keystrokes. Cause custom combination hotkeys not to work, but no more need to add "L" when call KeyWait. (#2)
+  Physical_Ignore: false
 ```
 (UTF-8 encoding)
 
