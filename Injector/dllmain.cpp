@@ -15,6 +15,7 @@ struct QString {
 class LogitechMouseExt {
     static inline struct {
         bool RemapG123;
+        DWORD Physical_Ignore;  // = Physical_Ignore ? AHK::KEY_PHYS_IGNORE : 0
     } config;
 
     struct args
@@ -61,7 +62,7 @@ class LogitechMouseExt {
                     0,
                     DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
                     0,
-                    (ULONG_PTR)GetMessageExtraInfo() | AHK::KEY_PHYS_IGNORE  //Make AHK consider it as phsical keystroke
+                    (ULONG_PTR)GetMessageExtraInfo() | config.Physical_Ignore
                 };
                 SendInput(1, &input, sizeof INPUT);
             }();
@@ -130,15 +131,23 @@ public:
     LogitechMouseExt() {
         //Get config
         config.RemapG123 = false;
+        config.Physical_Ignore = 0;
 
+        bool bad_file = false;
         YAML::Node yaml;
         try {
             yaml = YAML::LoadFile("winmm.dll.yaml");
         }
-        catch (const YAML::BadFile&) { }
+        catch (const YAML::BadFile&) {
+            bad_file = true;
+        }
 
-        if (yaml["Mouse"]["RemapG123"])
-            config.RemapG123 = yaml["Mouse"]["RemapG123"].as<bool>();
+        if (!bad_file) {
+            if (yaml["Mouse"]["RemapG123"])
+                config.RemapG123 = yaml["Mouse"]["RemapG123"].as<bool>();
+            if (yaml["AHK"]["Physical_Ignore"])
+                config.Physical_Ignore = yaml["AHK"]["Physical_Ignore"].as<bool>() ? AHK::KEY_PHYS_IGNORE : 0;
+        }
 
         //Attach
         Module LCore = *makeModule::CurrentProcess();
