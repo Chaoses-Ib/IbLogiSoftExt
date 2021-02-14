@@ -1,9 +1,9 @@
 ﻿#include "pch.h"
 #include <sstream>
 #include <optional>
-#include "Boost/di.hpp"
+#include <Boost/di.hpp>
 #include "helper.hpp"
-#include "yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "AHK.hpp"
 
 namespace di = boost::di;
