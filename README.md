@@ -8,6 +8,7 @@ An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/ar
   * Detect when your G-keys have been double-pressed, triple-pressed or long-pressed. (Remember to use "L" option when call KeyWait. [#2](../../issues/2))
   * Make your G-keys context-sensitive (perform different actions depending on specific conditions, such as different processes and windows). It's more configurable than LGS's Automatic Game Detection.
   * Define custom combinations of G-keys as hotkeys. (Just like G-Shift, but more powerful) ([#2](../../issues/2))
+* Reduce the background memory usage of Logitech Gaming Software. It can reduce the memory from 70MB to 10MB, approximately.
 
 ## Supported Version
 * Logitech Gaming Software 9.02.65 64-bit
@@ -34,6 +35,9 @@ If you don't like the default behavior, you can modify it by following the steps
 1. Refer to the following content to edit it:
 ```yaml
 # YAML
+Memory:
+  # If you have enough memory, you can turn it off.
+  EmptyWorkingSetOnStartup: true
 Mouse:
   # Whether or not to remap G1~G3. Sometimes may cause problems if turned on. (#1)
   RemapG123: false

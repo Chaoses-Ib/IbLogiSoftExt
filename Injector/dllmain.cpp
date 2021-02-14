@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include <thread>
 #include <sstream>
 #include <optional>
 #include <Boost/di.hpp>
@@ -133,6 +134,10 @@ public:
         config.RemapG123 = false;
         config.Physical_Ignore = 0;
 
+        struct {
+            bool EmptyWorkingSetOnStartup = true;
+        } local_config;
+
         bool bad_file = false;
         YAML::Node yaml;
         try {
@@ -143,10 +148,35 @@ public:
         }
 
         if (!bad_file) {
-            if (yaml["Mouse"]["RemapG123"])
-                config.RemapG123 = yaml["Mouse"]["RemapG123"].as<bool>();
-            if (yaml["AHK"]["Physical_Ignore"])
-                config.Physical_Ignore = yaml["AHK"]["Physical_Ignore"].as<bool>() ? AHK::KEY_PHYS_IGNORE : 0;
+            if (auto node = yaml["Mouse"]["RemapG123"])
+                config.RemapG123 = node.as<bool>();
+            if (auto node = yaml["AHK"]["Physical_Ignore"])
+                config.Physical_Ignore = node.as<bool>() ? AHK::KEY_PHYS_IGNORE : 0;
+
+            if (auto node = yaml["Memory"]["EmptyWorkingSetOnStartup"])
+                local_config.EmptyWorkingSetOnStartup = node.as<bool>();
+        }
+
+        if (local_config.EmptyWorkingSetOnStartup) {
+            /*
+            static thread t([] {
+                int count = 0;
+                while (true) {
+                    PROCESS_MEMORY_COUNTERS info;
+                    GetProcessMemoryInfo((HANDLE)-1, &info, sizeof PROCESS_MEMORY_COUNTERS);
+                    DebugOutput(wstringstream() << count << L" " << info.WorkingSetSize);
+                    count += 50;
+                    this_thread::sleep_for(50ms);
+                };
+                });
+            t.detach();
+            */
+
+            thread t([] {
+                this_thread::sleep_for(30s);
+                EmptyWorkingSet(GetCurrentProcess());
+            });
+            t.detach();
         }
 
         //Attach
