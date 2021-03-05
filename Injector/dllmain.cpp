@@ -46,7 +46,8 @@ class LogitechMouseExt {
             default: return L"";
             };
         }();
-        DebugOutput(wstringstream() << event_str << L"(" << event << L")" << L", " << *args->arg);
+        //Crash under Qt 5.15.2
+        //DebugOutput(wstringstream() << event_str << L"(" << event << L")" << L", " << *args->arg);
 
         //Remap G-keys
         if (event == 10 || event == 11) {
