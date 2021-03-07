@@ -35,6 +35,7 @@ If you don't like the default behavior, you can modify it by following the steps
 1. Refer to the following content to edit it:
 ```yaml
 # YAML
+ProcessGuard: false
 Memory:
   # If you have enough memory, you can turn it off.
   EmptyWorkingSetOnStartup: true

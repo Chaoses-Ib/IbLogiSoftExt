@@ -137,6 +137,7 @@ public:
 
         struct {
             bool EmptyWorkingSetOnStartup = true;
+            bool ProcessGuard = false;
         } local_config;
 
         bool bad_file = false;
@@ -156,6 +157,8 @@ public:
 
             if (auto node = yaml["Memory"]["EmptyWorkingSetOnStartup"])
                 local_config.EmptyWorkingSetOnStartup = node.as<bool>();
+            if (auto node = yaml["ProcessGuard"])
+                local_config.ProcessGuard = node.as<bool>();
         }
 
         if (local_config.EmptyWorkingSetOnStartup) {
@@ -193,6 +196,15 @@ public:
         Module Qt5Core = *ModuleFactory::Find(L"Qt5Core.dll");
         QString::utf16 = (decltype(QString::utf16))GetProcAddress(Qt5Core.handle, "?utf16@QString@@QEBAPEBGXZ");
         DebugOutput(wstringstream() << L"QString::utf16:" << QString::utf16);
+
+        if (local_config.ProcessGuard) {
+            STARTUPINFO si{ sizeof(STARTUPINFO) };
+            PROCESS_INFORMATION pi;
+            wchar cmdline[] = L"/minimized";
+            CreateProcessW(L"IbParentProcessGuard.exe", cmdline, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
     }
     ~LogitechMouseExt() {
         //IbDetourDetach(&LuaDispatchEvent, LuaDispatchEventDetour);

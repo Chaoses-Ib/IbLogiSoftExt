@@ -35,6 +35,7 @@ G700s  | G4\~G11 正常。不需要自动游戏检测。（[#1](../../issues/1)�
 1. 参考以下内容进行编辑：
 ```yaml
 # YAML
+ProcessGuard: false
 Memory:
   # 如果你内存够用，可以关掉。
   EmptyWorkingSetOnStartup: true
