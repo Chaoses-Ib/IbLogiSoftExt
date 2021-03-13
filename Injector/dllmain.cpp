@@ -9,6 +9,14 @@
 
 namespace di = boost::di;
 
+#ifdef _DEBUG
+constexpr bool kDebug = true;
+#else
+constexpr bool kDebug = false;
+#endif
+
+static HMODULE CurrentModule;
+
 struct QString {
     static inline const wchar_t* (*utf16)(const QString* t);
 };
@@ -143,7 +151,9 @@ public:
         bool bad_file = false;
         YAML::Node yaml;
         try {
-            yaml = YAML::LoadFile("winmm.dll.yaml");
+            char module_path[MAX_PATH];
+            GetModuleFileNameA(CurrentModule, module_path, size(module_path));
+            yaml = YAML::LoadFile(module_path + ".yaml"s);  //#TODO: UTF-8?
         }
         catch (const YAML::BadFile&) {
             bad_file = true;
@@ -200,8 +210,11 @@ public:
         if (local_config.ProcessGuard) {
             STARTUPINFO si{ sizeof(STARTUPINFO) };
             PROCESS_INFORMATION pi;
-            wchar cmdline[] = L"/minimized";
-            CreateProcessW(L"IbParentProcessGuard.exe", cmdline, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi);
+            //Don't place program name in lpApplicationName
+            wchar cmdline[] = L"IbParentProcessGuard.exe /minimized";
+            CreateProcessW(nullptr, cmdline, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi);
+            if constexpr (kDebug)
+                DebugOutput(L"CreateProcessW: "s + to_wstring(GetLastError()));
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         }
@@ -221,6 +234,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
         DebugOutput(L"Load");
+        CurrentModule = hModule;
         ext = di::make_injector().create<LogitechMouseExt>();
         break;
     case DLL_THREAD_ATTACH:
