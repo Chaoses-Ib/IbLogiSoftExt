@@ -1,4 +1,4 @@
-# IbLogitechGamingSoftwareExt
+# IbLgsExt
 Languages: [English](README.md), [简体中文](README.zh-Hans.md)  
 An extension for [Logitech Gaming Software](https://support.logi.com/hc/en-gb/articles/360025298053-Logitech-Gaming-Software).
 
