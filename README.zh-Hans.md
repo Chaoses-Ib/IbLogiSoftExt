@@ -1,4 +1,4 @@
-# IbLgsExt
+# IbLogiSoftExt
 语言: [English](README.md), [简体中文](README.zh-Hans.md)  
 一个 [Logitech 游戏软件](https://support.logi.com/hc/zh-cn/articles/360025298053) 的扩展。
 

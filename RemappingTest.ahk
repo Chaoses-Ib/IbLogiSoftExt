@@ -1,5 +1,5 @@
 ﻿; Author: Chaoses Ib
-; https://github.com/Chaoses-Ib/IbLgsExt
+; https://github.com/Chaoses-Ib/IbLogiSoftExt
 
 ;LButton::MsgBox LButton
 ;RButton::MsgBox RButton
