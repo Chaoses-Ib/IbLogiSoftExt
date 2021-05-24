@@ -169,7 +169,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AHK.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="helper.hpp" />
     <ClInclude Include="pch.h" />

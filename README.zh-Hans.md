@@ -42,9 +42,6 @@ Memory:
 Mouse:
   # 是否重映射G1~G3。如果开启有时可能会出现问题。（#1）
   RemapG123: false
-AHK:
-  # 让AHK将发送的VK当作物理按键。会导致自定义组合热键失效，但调用 KeyWait 时也不用再加“L”了。（#2）
-  Physical_Ignore: false
 ```
 （UTF-8 编码）
 

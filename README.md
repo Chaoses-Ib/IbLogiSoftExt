@@ -42,9 +42,6 @@ Memory:
 Mouse:
   # Whether or not to remap G1~G3. Sometimes may cause problems if turned on. (#1)
   RemapG123: false
-AHK:
-  # Make AHK consider the sent VKs as physical keystrokes. Cause custom combination hotkeys not to work, but no more need to add "L" when call KeyWait. (#2)
-  Physical_Ignore: false
 ```
 (UTF-8 encoding)
 

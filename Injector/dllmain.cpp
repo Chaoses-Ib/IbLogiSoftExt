@@ -5,7 +5,6 @@
 #include <Boost/di.hpp>
 #include "helper.hpp"
 #include <yaml-cpp/yaml.h>
-#include "AHK.hpp"
 
 namespace di = boost::di;
 
@@ -24,7 +23,6 @@ struct QString {
 class LogitechMouseExt {
     static inline struct {
         bool RemapG123;
-        DWORD Physical_Ignore;  // = Physical_Ignore ? AHK::KEY_PHYS_IGNORE : 0
     } config;
 
     struct args
@@ -72,7 +70,7 @@ class LogitechMouseExt {
                     0,
                     DWORD(event == 11 ? KEYEVENTF_KEYUP : 0),
                     0,
-                    (ULONG_PTR)GetMessageExtraInfo() | config.Physical_Ignore
+                    (ULONG_PTR)GetMessageExtraInfo()
                 };
                 SendInput(1, &input, sizeof INPUT);
             }();
@@ -141,7 +139,6 @@ public:
     LogitechMouseExt() {
         //Get config
         config.RemapG123 = false;
-        config.Physical_Ignore = 0;
 
         struct {
             bool EmptyWorkingSetOnStartup = true;
@@ -162,8 +159,6 @@ public:
         if (!bad_file) {
             if (auto node = yaml["Mouse"]["RemapG123"])
                 config.RemapG123 = node.as<bool>();
-            if (auto node = yaml["AHK"]["Physical_Ignore"])
-                config.Physical_Ignore = node.as<bool>() ? AHK::KEY_PHYS_IGNORE : 0;
 
             if (auto node = yaml["Memory"]["EmptyWorkingSetOnStartup"])
                 local_config.EmptyWorkingSetOnStartup = node.as<bool>();
