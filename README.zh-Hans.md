@@ -35,6 +35,7 @@ G700s  | G4\~G11 正常。不需要自动游戏检测。（[#1](../../issues/1)�
 1. 参考以下内容进行编辑：
 ```yaml
 # YAML
+# 在部分电脑上拔掉罗技设备会导致LGS崩溃，这个选项可以在崩溃后自动重启LGS。（需要 IbParentProcessGuard.exe，同时推荐使用 DisableWER.reg 来避免 Windows 记录崩溃。）
 ProcessGuard: false
 Memory:
   # 如果你内存够用，可以关掉。
