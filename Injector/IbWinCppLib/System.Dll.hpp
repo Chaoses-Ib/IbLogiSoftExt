@@ -7,7 +7,7 @@ namespace ib {
     struct Module {
         union {
             HMODULE handle;
-            addr base;
+            Addr base;
         };
 
         Module(HMODULE handle) : handle(handle) {};

@@ -82,7 +82,7 @@ class LogitechMouseExt {
 
     struct struct_a4
     {
-        byte_t gap0[8];
+        Byte gap0[8];
         unsigned int* gbutton;
         const QString* field_10;
         const QString* pqstring18;

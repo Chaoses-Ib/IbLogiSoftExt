@@ -12,7 +12,7 @@
 
 namespace ib {
     using wchar = wchar_t;
-    using byte_t = uint8_t;
+    using Byte = uint8_t;  //since there is std::byte
     using QWORD = uint64_t;
 
     using std::function;
@@ -77,4 +77,37 @@ namespace ib {
     
     using cwzstring = basic_zstring<const wchar, const wstring>;
     using wzstring = basic_zstring<wchar, wstring>;
+
+    //Enable C++17 to make use of auto type deduction.
+    template<typename T>
+    class auto_cast {
+        T value_;
+    public:
+        auto_cast(T value) : value_(value) {};
+
+        template<typename T2>
+        operator T2() {
+            return T2(value_);
+        }
+    };
+
+#define IB_GENERATE_AUTO_XX_CAST(CAST)  \
+    /*Enable C++17 to make use of auto type deduction.*/  \
+    template<typename T>  \
+    class auto_##CAST {  \
+        T value_;  \
+    public:  \
+        auto_##CAST(T value) : value_(value) {};  \
+        template<typename T2>  \
+        operator T2() {  \
+            return CAST<T2>(value_);  \
+        }  \
+    };
+
+    IB_GENERATE_AUTO_XX_CAST(static_cast);
+    IB_GENERATE_AUTO_XX_CAST(const_cast);
+    IB_GENERATE_AUTO_XX_CAST(dynamic_cast);
+    IB_GENERATE_AUTO_XX_CAST(reinterpret_cast);
+#undef IB_GENERATE_AUTO_XX_CAST
+
 }
