@@ -3,8 +3,9 @@
 #include <sstream>
 #include <optional>
 #include <Boost/di.hpp>
-#include "helper.hpp"
 #include <yaml-cpp/yaml.h>
+#include "ipc.hpp"
+#include "helper.hpp"
 
 namespace di = boost::di;
 
@@ -213,6 +214,8 @@ public:
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         }
+
+        IpcStart();
     }
     ~LogitechMouseExt() {
         //IbDetourDetach(&LuaDispatchEvent, LuaDispatchEventDetour);
