@@ -6,20 +6,22 @@
 
 using namespace ib;
 
-//#TODO: right?
 struct Modifier {
     bool LCtrl : 1;
     bool LShift : 1;
     bool LAlt : 1;
-    bool LWin : 1;
+    bool LGui : 1;
     bool RCtrl : 1;
     bool RShift : 1;
     bool RAlt : 1;
-    bool RWin : 1;
+    bool RGui : 1;
 };
 
 struct KeyboardReport {
-    Modifier modifier;
+    union {
+        Modifier modifier;
+        Byte modifier_byte;
+    };
     Byte reserved;
     Byte keys[6];
 private:
@@ -28,7 +30,7 @@ private:
     }
 };
 
-uint8_t VkToUsb(uint8_t vkCode);
+uint8_t VkToUsage(uint8_t vkCode);
 
 static KeyboardReport report;
 
@@ -41,8 +43,8 @@ SHORT DriverGetAsyncKeyState(int vKey, decltype(GetAsyncKeyState) f) {
     CODE_GENERATE(VK_RSHIFT, RShift)
     CODE_GENERATE(VK_LMENU, LAlt)
     CODE_GENERATE(VK_RMENU, RAlt)
-    CODE_GENERATE(VK_LWIN, LWin)
-    CODE_GENERATE(VK_RWIN, RWin)
+    CODE_GENERATE(VK_LWIN, LGui)
+    CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
     default:
         return f(vKey);
@@ -59,8 +61,8 @@ void DriverSyncKeyStates() {
     CODE_GENERATE(VK_RSHIFT, RShift)
     CODE_GENERATE(VK_LMENU, LAlt)
     CODE_GENERATE(VK_RMENU, RAlt)
-    CODE_GENERATE(VK_LWIN, LWin)
-    CODE_GENERATE(VK_RWIN, RWin)
+    CODE_GENERATE(VK_LWIN, LGui)
+    CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
 }
 
@@ -80,16 +82,16 @@ void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
             CODE_GENERATE(VK_RSHIFT, RShift)
             CODE_GENERATE(VK_LMENU, LAlt)
             CODE_GENERATE(VK_RMENU, RAlt)
-            CODE_GENERATE(VK_LWIN, LWin)
-            CODE_GENERATE(VK_RWIN, RWin)
+            CODE_GENERATE(VK_LWIN, LGui)
+            CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
 
         default:
-            uint8_t id = VkToUsb((uint8_t)inputs[i].ki.wVk);;
+            uint8_t usage = VkToUsage((uint8_t)inputs[i].ki.wVk);;
             if (keydown) {
                 for (int i = 0; i < 6; i++) {
                     if (report.keys[i] == 0) {
-                        report.keys[i] = id;
+                        report.keys[i] = usage;
                         break;
                     }
                 }
@@ -97,7 +99,7 @@ void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
             }
             else {
                 for (int i = 0; i < 6; i++) {
-                    if (report.keys[i] == id) {
+                    if (report.keys[i] == usage) {
                         report.keys[i] = 0;
                         //#TODO: move to left?
                         break;
@@ -106,13 +108,14 @@ void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
             }
         }
 
-        DebugOutput(wstringstream() << L"LogiLib.DeviceIoControl: " << *(Byte*)&report.modifier << L", " << report.keys[0] << ", " << report.keys[1]
+        DebugOutput(wstringstream() << L"LogiLib.DeviceIoControl: " << report.modifier_byte << L", " << report.keys[0] << ", " << report.keys[1]
             << " (" << inputs[i].ki.wVk << ", " << inputs[i].ki.dwFlags << ")");
         DeviceIoControl(device, 0x2A200C, &report, 8, nullptr, 0, &bytes_returned, nullptr);
     }
 }
 
-uint8_t VkToUsb(uint8_t vkCode) {
+//#TODO: fully test
+uint8_t VkToUsage(uint8_t vkCode) {
     switch (vkCode) {
     case 0x00: return 0x0000;
     case 0x01: return 0x0000;  //VK_LBUTTON
