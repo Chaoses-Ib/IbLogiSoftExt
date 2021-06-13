@@ -24,9 +24,6 @@
     <ClInclude Include="helper.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="driver.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ipc.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -45,9 +42,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ipc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="driver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

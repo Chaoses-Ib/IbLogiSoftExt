@@ -169,7 +169,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="driver.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="helper.hpp" />
     <ClInclude Include="ipc.hpp" />
@@ -177,7 +176,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="driver.cpp" />
     <ClCompile Include="export.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="ipc.cpp" />

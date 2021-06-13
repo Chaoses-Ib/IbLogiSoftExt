@@ -150,7 +150,7 @@ public:
         YAML::Node yaml;
         try {
             char module_path[MAX_PATH];
-            GetModuleFileNameA(CurrentModule, module_path, size(module_path));
+            GetModuleFileNameA(CurrentModule, module_path, (DWORD)size(module_path));
             yaml = YAML::LoadFile(module_path + ".yaml"s);  //#TODO: UTF-8?
         }
         catch (const YAML::BadFile&) {
