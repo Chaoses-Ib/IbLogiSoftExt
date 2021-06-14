@@ -6,6 +6,179 @@
 
 using namespace ib;
 
+extern HANDLE device = 0;
+extern bool has_acceleration = false;
+
+void DriverSend(INPUT inputs[], uint32_t n) {
+    for (uint32_t i = 0; i < n; i++) {
+        DWORD type = inputs[i].type;
+
+        uint32_t j = i + 1;
+        while (j < n && inputs[j].type == type)
+            j++;
+
+        switch (type) {
+        case INPUT_KEYBOARD:
+            DriverKeyboardSend(inputs + i, j - i);
+            break;
+        case INPUT_MOUSE:
+            DriverMouseSend(inputs + i, j - i);
+            break;
+        }
+    }
+}
+
+struct Button {
+    bool LButton : 1;
+    bool RButton : 1;
+    bool MButton : 1;
+    bool XButton1 : 1;
+    bool XButton2 : 1;
+    bool unknown : 3;
+};
+
+struct MouseReport {
+    union {
+        Button button;
+        Byte button_byte;
+    };
+    int8_t x;
+    int8_t y;
+    Byte unknown_W;  //#TODO: Wheel?
+    Byte unknown_T;  //#TODO: T?
+private:
+    void assert_size() {
+        static_assert(sizeof MouseReport == 5);
+    }
+};
+
+//#TODO: **incorrect**
+int8_t AvoidLgsAcceleration(int8_t x) {
+    if (!has_acceleration) return x;
+    if (!x) return 0;
+    int8_t abs_x = abs(x);
+    int8_t sign = x & 0x80;
+    if (abs_x <= 10) {
+        return sign | (abs_x == 1 ? 2 : x);
+    }
+    else {
+        return sign | (int8_t)round(0.372212388438 * abs_x + 5.59740151371);
+    }
+}
+
+//#TODO
+LONG AvoidWinAcceleration(LONG x) {
+    static struct {
+        int threshold[2];
+        int acceleration;
+    } mouse;
+    static int speed = -1;  //1~20. #TODO: 0 when disabled?
+    if (speed == -1) {  //#TODO: may change
+        SystemParametersInfoW(SPI_GETMOUSE, 0, &mouse, 0);
+        SystemParametersInfoW(SPI_GETMOUSESPEED, 0, &speed, 0);
+        DebugOutput(wstringstream() << L"LogiLib.AvoidMouseAcceleration: "
+            << mouse.acceleration << L", " << mouse.threshold[0] << L"," << mouse.threshold[1]
+            << L", " << speed);
+        //1, 6,10, 10
+    }
+
+    /*
+    if (mouse.acceleration) {
+        if (x > mouse.threshold[0])
+            x *= 2;
+        if (x > mouse.threshold[1] && mouse.acceleration == 2)
+            x *= 2;
+    }
+    return x * speed / 10;
+    */
+
+    return x;
+}
+
+const DWORD IOCTL_BUSENUM_PLAY_MOUSEMOVE = 0x2A2010;
+void DriverMouseSend(INPUT inputs[], uint32_t n) {
+    MouseReport report{};
+    DWORD bytes_returned;
+    for (uint32_t i = 0; i < n; i++) {
+        MOUSEINPUT& mi = inputs[i].mi;
+        DebugOutput(wstringstream() << L"LogiLib.MouseInput: " << mi.dwFlags << ", " << mi.dx << ", " << mi.dy);
+
+        //#TODO: move and then click, or click and then move? former?
+
+        //#TODO: MOUSEEVENTF_MOVE_NOCOALESCE, MOUSEEVENTF_VIRTUALDESK
+        if (mi.dwFlags & MOUSEEVENTF_MOVE || mi.dwFlags & MOUSEEVENTF_MOVE_NOCOALESCE) {
+            if (mi.dwFlags & MOUSEEVENTF_ABSOLUTE) {
+                static POINT screen;  //#TODO: may change
+                if (!screen.x) {
+                    screen.x = GetSystemMetrics(SM_CXSCREEN);
+                    screen.y = GetSystemMetrics(SM_CYSCREEN);
+                }
+                // mi.dx = round(x / screen.x * 65536)
+                mi.dx = mi.dx * screen.x / 65536;
+                mi.dy = mi.dy * screen.y / 65536;
+
+                POINT point;
+                GetCursorPos(&point);
+                DebugOutput(wstringstream() << L"LogiLib.MouseAbsolute: " << mi.dx << ", " << mi.dy << ", from " << point.x << ", " << point.y);
+                mi.dx -= point.x;
+                mi.dy -= point.y;
+            }
+
+            while (abs(mi.dx) > 127 || abs(mi.dy) > 127) {
+                if (abs(mi.dx) > 127) {
+                    report.x = mi.dx > 0 ? 127 : -127;
+                    mi.dx -= report.x;
+                }
+                else {
+                    report.x = 0;
+                }
+
+                if (abs(mi.dy) > 127) {
+                    report.y = mi.dy > 0 ? 127 : -127;
+                    mi.dy -= report.y;
+                }
+                else {
+                    report.y = 0;
+                }
+
+                DebugOutput(wstringstream() << L"LogiLib.Mouse: " << report.button_byte << L", "
+                    << report.x << L", " << report.y << L" (" << AvoidLgsAcceleration(report.x) << L", " << AvoidLgsAcceleration(report.y) << L")"
+                    << L", " << mi.dx << L", " << mi.dy);
+                report.x = AvoidLgsAcceleration(report.x);
+                report.y = AvoidLgsAcceleration(report.y);
+                DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, &report, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
+            }
+
+            report.x = (uint8_t)mi.dx;
+            report.y = (uint8_t)mi.dy;
+        }
+
+#define CODE_GENERATE(down, up, member)  \
+        if (mi.dwFlags & down || mi.dwFlags & up)  \
+            report.button.##member = mi.dwFlags & down;
+        CODE_GENERATE(MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, LButton)  //#TODO: may be switched?
+            CODE_GENERATE(MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, RButton)
+            CODE_GENERATE(MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MButton)
+#undef CODE_GENERATE
+            if (mi.dwFlags & MOUSEEVENTF_XDOWN || mi.dwFlags & MOUSEEVENTF_XUP) {
+                bool down = mi.dwFlags & MOUSEEVENTF_XDOWN;
+                switch (mi.mouseData) {
+                case XBUTTON1: report.button.XButton1 = down; break;
+                case XBUTTON2: report.button.XButton2 = down; break;
+                }
+            }
+
+        DebugOutput(wstringstream() << L"LogiLib.Mouse: " << report.button_byte << L", "
+            << report.x << L", " << report.y << L" (" << AvoidLgsAcceleration(report.x) << L", " << AvoidLgsAcceleration(report.y) << L")");
+        report.x = AvoidLgsAcceleration(report.x);
+        report.y = AvoidLgsAcceleration(report.y);
+        DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, &report, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
+        report.button = Button();  //only once
+        report.x = report.y = 0;
+    }
+}
+
+
 struct Modifier {
     bool LCtrl : 1;
     bool LShift : 1;
@@ -34,17 +207,17 @@ uint8_t VkToUsage(uint8_t vkCode);
 
 static KeyboardReport report;
 
-SHORT DriverGetAsyncKeyState(int vKey, decltype(GetAsyncKeyState) f) {
+SHORT DriverGetKeyState(int vKey, decltype(GetAsyncKeyState) f) {
     switch (vKey) {
 #define CODE_GENERATE(vk, member)  case vk: return report.modifier.##member << 15;
-    CODE_GENERATE(VK_LCONTROL, LCtrl)
-    CODE_GENERATE(VK_RCONTROL, RCtrl)
-    CODE_GENERATE(VK_LSHIFT, LShift)
-    CODE_GENERATE(VK_RSHIFT, RShift)
-    CODE_GENERATE(VK_LMENU, LAlt)
-    CODE_GENERATE(VK_RMENU, RAlt)
-    CODE_GENERATE(VK_LWIN, LGui)
-    CODE_GENERATE(VK_RWIN, RGui)
+        CODE_GENERATE(VK_LCONTROL, LCtrl)
+            CODE_GENERATE(VK_RCONTROL, RCtrl)
+            CODE_GENERATE(VK_LSHIFT, LShift)
+            CODE_GENERATE(VK_RSHIFT, RShift)
+            CODE_GENERATE(VK_LMENU, LAlt)
+            CODE_GENERATE(VK_RMENU, RAlt)
+            CODE_GENERATE(VK_LWIN, LGui)
+            CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
     default:
         return f(vKey);
@@ -56,17 +229,17 @@ void DriverSyncKeyStates() {
     //static bool states[256];  //down := true
 #define CODE_GENERATE(vk, member)  report.modifier.##member = GetAsyncKeyState(vk) & 0x8000;
     CODE_GENERATE(VK_LCONTROL, LCtrl)
-    CODE_GENERATE(VK_RCONTROL, RCtrl)
-    CODE_GENERATE(VK_LSHIFT, LShift)
-    CODE_GENERATE(VK_RSHIFT, RShift)
-    CODE_GENERATE(VK_LMENU, LAlt)
-    CODE_GENERATE(VK_RMENU, RAlt)
-    CODE_GENERATE(VK_LWIN, LGui)
-    CODE_GENERATE(VK_RWIN, RGui)
+        CODE_GENERATE(VK_RCONTROL, RCtrl)
+        CODE_GENERATE(VK_LSHIFT, LShift)
+        CODE_GENERATE(VK_RSHIFT, RShift)
+        CODE_GENERATE(VK_LMENU, LAlt)
+        CODE_GENERATE(VK_RMENU, RAlt)
+        CODE_GENERATE(VK_LWIN, LGui)
+        CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
 }
 
-void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
+void DriverKeyboardSend(INPUT inputs[], uint32_t n) {
     DWORD bytes_returned;
     for (uint32_t i = 0; i < n; i++) {
         bool keydown = !(inputs[i].ki.dwFlags & KEYEVENTF_KEYUP);
@@ -77,13 +250,13 @@ void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
             report.modifier.##member = keydown;  \
             break;
             CODE_GENERATE(VK_LCONTROL, LCtrl)
-            CODE_GENERATE(VK_RCONTROL, RCtrl)
-            CODE_GENERATE(VK_LSHIFT, LShift)
-            CODE_GENERATE(VK_RSHIFT, RShift)
-            CODE_GENERATE(VK_LMENU, LAlt)
-            CODE_GENERATE(VK_RMENU, RAlt)
-            CODE_GENERATE(VK_LWIN, LGui)
-            CODE_GENERATE(VK_RWIN, RGui)
+                CODE_GENERATE(VK_RCONTROL, RCtrl)
+                CODE_GENERATE(VK_LSHIFT, LShift)
+                CODE_GENERATE(VK_RSHIFT, RShift)
+                CODE_GENERATE(VK_LMENU, LAlt)
+                CODE_GENERATE(VK_RMENU, RAlt)
+                CODE_GENERATE(VK_LWIN, LGui)
+                CODE_GENERATE(VK_RWIN, RGui)
 #undef CODE_GENERATE
 
         default:
@@ -108,9 +281,9 @@ void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n) {
             }
         }
 
-        DebugOutput(wstringstream() << L"LogiLib.DeviceIoControl: " << report.modifier_byte << L", " << report.keys[0] << ", " << report.keys[1]
+        DebugOutput(wstringstream() << L"LogiLib.Kerboard: " << report.modifier_byte << L", " << report.keys[0] << ", " << report.keys[1]
             << " (" << inputs[i].ki.wVk << ", " << inputs[i].ki.dwFlags << ")");
-        DeviceIoControl(device, 0x2A200C, &report, 8, nullptr, 0, &bytes_returned, nullptr);
+        DeviceIoControl(device, 0x2A200C, &report, sizeof KeyboardReport, nullptr, 0, &bytes_returned, nullptr);
     }
 }
 

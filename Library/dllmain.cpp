@@ -5,6 +5,7 @@
 #include <sstream>
 #include <detours/detours.h>
 #include "../Injector/helper.hpp"
+#include "../Injector/ipc.hpp"
 #include "driver.hpp"
 
 constexpr int debug_ =
@@ -14,7 +15,35 @@ constexpr int debug_ =
 0;
 #endif
 
-static HANDLE keyboard_device;
+static bool hook = false;
+
+static decltype(SendInput)* SendInputTrue = SendInput;
+extern "C" __declspec(dllexport) UINT WINAPI IbLogiSendInput(UINT cInputs, LPINPUT pInputs, int cbSize) {
+    if (!hook)
+        return SendInputTrue(cInputs, pInputs, cbSize);
+
+    /*if (debug_) {
+        std::wstringstream ss;
+        ss << L"IbLogiLib.SendInput: ";
+        for (UINT i = 0; i < cInputs; i++) {
+            ss << (int)pInputs[i].ki.wVk << " " << (pInputs[i].ki.dwFlags & KEYEVENTF_KEYUP ? 0 : 1) << ", ";
+        }
+        OutputDebugStringW(ss.str().c_str());
+    }*/
+
+    DriverSend(pInputs, cInputs);
+    return cInputs;
+}
+
+//#TODO: only needed when two AHK processes exist?
+static decltype(GetAsyncKeyState)* GetAsyncKeyStateTrue = GetAsyncKeyState;
+SHORT WINAPI GetAsyncKeyStateDetour(int vKey) {
+    if (!hook)
+        return GetAsyncKeyStateTrue(vKey);
+
+    DebugOutput(wstringstream() << L"LogiLib.GetAsyncKeyState: " << vKey << ", " << DriverGetKeyState(vKey, GetAsyncKeyStateTrue));
+    return DriverGetKeyState(vKey, GetAsyncKeyStateTrue);
+}
 
 //Return 0 if succeeds.
 extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
@@ -33,9 +62,7 @@ extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
     DWORD mode = PIPE_READMODE_MESSAGE;
     SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr);  //#TODO: necessary?
 
-    struct Request {
-        uint32_t opcode;
-    } request;
+    Request request;
     request.opcode = 1;
     DWORD written;
     if (!WriteFile(pipe, &request, sizeof Request, &written, nullptr)) {
@@ -43,22 +70,24 @@ extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
         return ((uint64_t)GetLastError() << 32) + 2;
     }
 
-    struct Response {
-        uint64_t error;
-        uint64_t data;
-    } response;
+    Response response;
     DWORD bytes_read;
     if (!ReadFile(pipe, &response, sizeof Response, &bytes_read, nullptr)) {
         CloseHandle(pipe);
         return ((uint64_t)GetLastError() << 32) + 3;
     }
-    DebugOutput(wstringstream() << L"LogiLib: error  " << response.error << L", " << response.data);
+    DebugOutput(wstringstream() << L"LogiLib: error  " << response.error << L", " << response.op1.device);
     if (response.error) {
         CloseHandle(pipe);
         return ((uint64_t)GetLastError() << 32) + 4;
     }
 
-    keyboard_device = (HANDLE)response.data;
+    device = (HANDLE)response.op1.device;
+    has_acceleration = response.op1.flags & 1;
+
+    IbDetourAttach(&GetAsyncKeyStateTrue, GetAsyncKeyStateDetour);
+    IbDetourAttach(&SendInputTrue, IbLogiSendInput);
+
     return 0;
 
     /*
@@ -71,7 +100,7 @@ extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
         &bytes_read,
         NMPWAIT_NOWAIT
     )) {
-        DebugOutput(wstringstream() << L"LogiLib: result " << result << L", " << (uintptr_t)keyboard_device);
+        DebugOutput(wstringstream() << L"LogiLib: result " << result << L", " << (uintptr_t)device);
         return result;
     }
     else {
@@ -81,49 +110,26 @@ extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
 }
 
 extern "C" __declspec(dllexport) void __stdcall IbLogiDestory() {
-    CloseHandle(keyboard_device);
-}
-
-
-static decltype(SendInput)* SendInputTrue = SendInput;
-extern "C" __declspec(dllexport) UINT WINAPI IbLogiSendInput(UINT cInputs, LPINPUT pInputs, int cbSize) {
-    /*if (debug_) {
-        std::wstringstream ss;
-        ss << L"IbLogiLib.SendInput: ";
-        for (UINT i = 0; i < cInputs; i++) {
-            ss << (int)pInputs[i].ki.wVk << " " << (pInputs[i].ki.dwFlags & KEYEVENTF_KEYUP ? 0 : 1) << ", ";
-        }
-        OutputDebugStringW(ss.str().c_str());
-    }*/
-
-    DriverKeyboardSend(keyboard_device, pInputs, cInputs);
-    return cInputs;
-}
-
-//#TODO: only needed when two AHK processes exist?
-static decltype(GetAsyncKeyState)* GetAsyncKeyStateTrue = GetAsyncKeyState;
-SHORT WINAPI GetAsyncKeyStateDetour(int vKey) {
-    DebugOutput(wstringstream() << L"LogiLib.GetAsyncKeyState: " << vKey << ", " << DriverGetAsyncKeyState(vKey, GetAsyncKeyStateTrue));
-    return DriverGetAsyncKeyState(vKey, GetAsyncKeyStateTrue);
+    IbDetourDetach(&SendInputTrue, IbLogiSendInput);
+    IbDetourDetach(&GetAsyncKeyStateTrue, GetAsyncKeyStateDetour);
+    CloseHandle(device);
 }
 
 extern "C" __declspec(dllexport) bool __stdcall IbLogiSendInputHookBegin() {
-    if (!keyboard_device)
+    if (!device)
         return false;
     DriverSyncKeyStates();
-    IbDetourAttach(&GetAsyncKeyStateTrue, GetAsyncKeyStateDetour);
-    IbDetourAttach(&SendInputTrue, IbLogiSendInput);
+    hook = true;
     return true;
 }
 extern "C" __declspec(dllexport) void __stdcall IbLogiSendInputHookEnd() {
-    IbDetourDetach(&SendInputTrue, IbLogiSendInput);
-    IbDetourDetach(&GetAsyncKeyStateTrue, GetAsyncKeyStateDetour);
+    hook = false;
 }
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
+BOOL APIENTRY DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved
+)
 {
     DebugOutput(L"LogiLib.DllMain: " + std::to_wstring(ul_reason_for_call));
     switch (ul_reason_for_call)

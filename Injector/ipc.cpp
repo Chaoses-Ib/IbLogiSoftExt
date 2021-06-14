@@ -3,17 +3,17 @@
 #include <vector>
 #include <thread>
 #include <Windows.h>
+#include <rapidjson/document.h>
+#include <rapidjson/filereadstream.h>
 #include "helper.hpp"
 
 using namespace ib;
 
-const DWORD buffer_size = 16;
-
 struct RoutineData {
     OVERLAPPED overlap;
     HANDLE pipe;
-    Byte in_buf[buffer_size];
-    Byte out_buf[buffer_size];
+    Request request;
+    Response response;
 };
 
 void WINAPI IpcReadRoutine(DWORD error, DWORD size, OVERLAPPED* overlap);
@@ -33,8 +33,8 @@ void IpcStart() {
                 PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
                 PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE,
                 PIPE_UNLIMITED_INSTANCES,
-                buffer_size,
-                buffer_size,
+                sizeof Response,
+                sizeof Request,
                 0,  //50ms
                 nullptr);
             DebugOutput(L"CreatePipe: " + to_wstring((uintptr_t)pipe));
@@ -90,7 +90,7 @@ void WINAPI IpcReadRoutine(DWORD error, DWORD size, OVERLAPPED* overlap)
         delete data;
     };
     auto read = [&data, &close] {
-        if (!ReadFileEx(data->pipe, data->in_buf, sizeof(data->in_buf), &data->overlap, IpcReadRoutine))
+        if (!ReadFileEx(data->pipe, &data->request, sizeof(data->request), &data->overlap, IpcReadRoutine))
             close();
     };
     if (!error && !size) {  //call from IpcStart
@@ -102,17 +102,8 @@ void WINAPI IpcReadRoutine(DWORD error, DWORD size, OVERLAPPED* overlap)
         return;
     }
 
-    struct Request {
-        uint32_t opcode;
-    } *request = auto_cast(data->in_buf);
-
-    struct Response {
-        uint64_t error;
-        uint64_t data;
-    } *response = auto_cast(data->out_buf);
-    
-    response->error = [data, request, response]() -> uint64_t {
-        if (request->opcode == 1 || request->opcode == 2) {
+    data->response.error = [data]() -> uint64_t {
+        if (data->request.opcode == 1) {
             ULONG client_pid;
             GetNamedPipeClientProcessId(data->pipe, &client_pid);
             HANDLE client = OpenProcess(PROCESS_DUP_HANDLE, false, client_pid);
@@ -120,22 +111,80 @@ void WINAPI IpcReadRoutine(DWORD error, DWORD size, OVERLAPPED* overlap)
                 return ((uint64_t)GetLastError() << 32) + 2;
             }
 
+            /*
+            <?xml version="1.0" encoding="utf-8"?>
+            <CheatTable>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>0</ID>
+                  <Description>"Device handle"</Description>
+                  <LastState Value="000004A0" RealAddress="1FFD6F0FF78"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>LCore.exe+10B8220</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatTable>
+            */
             Module LCore = *ModuleFactory::CurrentProcess();
-            if (request->opcode == 1) {
-                HANDLE keyboard_device = LCore.base[0x10B8220][0x10][0x8];
-                bool success = DuplicateHandle(GetCurrentProcess(), keyboard_device, client, (HANDLE*)&response->data, 0, false, DUPLICATE_SAME_ACCESS);  //#TODO: cut down access
-                return success ? 0 : ((uint64_t)GetLastError() << 32) + 3;
+            HANDLE device = LCore.base[0x10B8220][0x10][0x8];
+            bool success = DuplicateHandle(GetCurrentProcess(), device, client, (HANDLE*)&data->response.op1.device, 0, false, DUPLICATE_SAME_ACCESS);  //#TODO: cut down access
+            if (!success) {
+                return ((uint64_t)GetLastError() << 32) + 3;
             }
-            else {  //#TODO
-                return 1;
-            }
+
+            data->response.op1.flags = 0;
+            do {
+                using namespace rapidjson;
+                //#TODO: 20 warnings, wow...maybe getline is better? or disable warning for rapidjson?
+
+                //fopen doesn't support environment variables
+                wchar path[MAX_PATH];
+                ExpandEnvironmentStringsW(LR"(%LOCALAPPDATA%\Logitech\Logitech Gaming Software\settings.json)", path, std::size(path));
+                FILE* file = _wfsopen(path, L"rb", _SH_DENYNO);
+                if (!file) {
+                    DebugOutput(L"response.op1.flags: Opening file failed");
+                    break;
+                }
+                char* buf = new char[16 * 1024];
+                FileReadStream is(file, buf, sizeof(buf));
+
+                Document doc;
+                doc.ParseStream(is);
+                
+                //pointer.hasAcceleration
+                //#TODO: FindMember
+                if (doc.HasMember("pointer")) {
+                    auto& pointer = doc["pointer"];
+                    if (pointer.HasMember("hasAcceleration") && pointer["hasAcceleration"].GetBool()) {
+                        data->response.op1.flags |= 1;
+                    }
+                    else {
+                        DebugOutput(L"response.op1.flags: hasAcceleration not found");
+                    }
+                }
+                else {
+                    DebugOutput(L"response.op1.flags: pointer not found");
+                }
+
+                fclose(file);
+                delete[] buf;
+            } while (false);
+            DebugOutput(L"response.op1.flags: " + to_wstring(data->response.op1.flags));
+
+            return 0;
         }
         else {
             return 1;
         }
     }();
 
-    if (!WriteFileEx(data->pipe, data->out_buf, sizeof(data->out_buf), &data->overlap, IpcWriteRoutine))
+    if (!WriteFileEx(data->pipe, &data->response, sizeof(data->response), &data->overlap, IpcWriteRoutine))
         close();
 }
 

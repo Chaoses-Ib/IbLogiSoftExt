@@ -1,6 +1,13 @@
 #pragma once
 #include <cstdint>
 
-void DriverKeyboardSend(HANDLE device, INPUT inputs[], uint32_t n);
+extern HANDLE device;
+extern bool has_acceleration;
+
+void DriverSend(INPUT inputs[], uint32_t n);
+
+void DriverKeyboardSend(INPUT inputs[], uint32_t n);
 void DriverSyncKeyStates();
-SHORT DriverGetAsyncKeyState(int vKey, decltype(GetAsyncKeyState) f);
+SHORT DriverGetKeyState(int vKey, decltype(GetAsyncKeyState) f);
+
+void DriverMouseSend(INPUT inputs[], uint32_t n);
