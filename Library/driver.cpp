@@ -52,22 +52,8 @@ private:
     }
 };
 
-//#TODO: **incorrect**
-int8_t AvoidLgsAcceleration(int8_t x) {
-    if (!has_acceleration) return x;
-    if (!x) return 0;
-    int8_t abs_x = abs(x);
-    int8_t sign = x & 0x80;
-    if (abs_x <= 10) {
-        return sign | (abs_x == 1 ? 2 : x);
-    }
-    else {
-        return sign | (int8_t)round(0.372212388438 * abs_x + 5.59740151371);
-    }
-}
-
 //#TODO
-LONG AvoidWinAcceleration(LONG x) {
+LONG CompensateWinAcceleration(LONG x) {
     static struct {
         int threshold[2];
         int acceleration;
@@ -95,11 +81,40 @@ LONG AvoidWinAcceleration(LONG x) {
     return x;
 }
 
-const DWORD IOCTL_BUSENUM_PLAY_MOUSEMOVE = 0x2A2010;
-void DriverMouseSend(INPUT inputs[], uint32_t n) {
-    MouseReport report{};
+int8_t CompensateLgsAcceleration(int8_t x) {
+    int8_t abs_x = abs(x);
+    int8_t sign = x > 0 ? 1 : -1;
+
+    if (abs_x <= 5)
+        return x;
+    else if (abs_x <= 10)
+        return sign * (abs_x + 1);
+    else
+        return sign * (int8_t)round(0.6156218196 * abs_x + 4.45777444629);
+}
+
+void MouseSend(MouseReport report) {
+    const DWORD IOCTL_BUSENUM_PLAY_MOUSEMOVE = 0x2A2010;
     DWORD bytes_returned;
+
+    if (has_acceleration && (report.x || report.y)) {
+        static MouseReport report11{ {0}, 1, 1, 0, 0 };  //{ 0, 1, 1, 0, 0} will get { {6}, 0, 0, 0, 0}
+        //DebugOutput(wstringstream() << L"LogiLib.Mouse.Report11: " << report11.button_byte << L", " << report11.x << L", " << report11.y);
+        DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, (void*)&report11, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
+        report11.x = -report11.x;
+        report11.y = -report11.y;
+
+        report.x = CompensateLgsAcceleration(report.x);
+        report.y = CompensateLgsAcceleration(report.y);
+    }
+
+    DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, &report, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
+}
+
+void DriverMouseSend(INPUT inputs[], uint32_t n) {
     for (uint32_t i = 0; i < n; i++) {
+        MouseReport report{};  //clear every time
+
         MOUSEINPUT& mi = inputs[i].mi;
         DebugOutput(wstringstream() << L"LogiLib.MouseInput: " << mi.dwFlags << ", " << mi.dx << ", " << mi.dy);
 
@@ -142,11 +157,9 @@ void DriverMouseSend(INPUT inputs[], uint32_t n) {
                 }
 
                 DebugOutput(wstringstream() << L"LogiLib.Mouse: " << report.button_byte << L", "
-                    << report.x << L", " << report.y << L" (" << AvoidLgsAcceleration(report.x) << L", " << AvoidLgsAcceleration(report.y) << L")"
+                    << report.x << L", " << report.y << L" (" << CompensateLgsAcceleration(report.x) << L", " << CompensateLgsAcceleration(report.y) << L")"
                     << L", " << mi.dx << L", " << mi.dy);
-                report.x = AvoidLgsAcceleration(report.x);
-                report.y = AvoidLgsAcceleration(report.y);
-                DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, &report, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
+                MouseSend(report);
             }
 
             report.x = (uint8_t)mi.dx;
@@ -169,12 +182,8 @@ void DriverMouseSend(INPUT inputs[], uint32_t n) {
             }
 
         DebugOutput(wstringstream() << L"LogiLib.Mouse: " << report.button_byte << L", "
-            << report.x << L", " << report.y << L" (" << AvoidLgsAcceleration(report.x) << L", " << AvoidLgsAcceleration(report.y) << L")");
-        report.x = AvoidLgsAcceleration(report.x);
-        report.y = AvoidLgsAcceleration(report.y);
-        DeviceIoControl(device, IOCTL_BUSENUM_PLAY_MOUSEMOVE, &report, sizeof MouseReport, nullptr, 0, &bytes_returned, nullptr);
-        report.button = Button();  //only once
-        report.x = report.y = 0;
+            << report.x << L", " << report.y << L" (" << CompensateLgsAcceleration(report.x) << L", " << CompensateLgsAcceleration(report.y) << L")");
+        MouseSend(report);
     }
 }
 

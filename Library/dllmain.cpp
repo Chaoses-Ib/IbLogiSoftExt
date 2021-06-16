@@ -109,7 +109,7 @@ extern "C" __declspec(dllexport) uint64_t __stdcall IbLogiInit() {
     */
 }
 
-extern "C" __declspec(dllexport) void __stdcall IbLogiDestory() {
+extern "C" __declspec(dllexport) void __stdcall IbLogiDestroy() {
     IbDetourDetach(&SendInputTrue, IbLogiSendInput);
     IbDetourDetach(&GetAsyncKeyStateTrue, GetAsyncKeyStateDetour);
     CloseHandle(device);
@@ -137,10 +137,14 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     case DLL_PROCESS_ATTACH:
         //don't auto init so that incorrect usage can be exposed
         //#TODO: or lock self's ref count?
+        break;
     case DLL_THREAD_ATTACH:
+        break;
     case DLL_THREAD_DETACH:
+        break;
+        //remember to break, or it will destroy
     case DLL_PROCESS_DETACH:
-        IbLogiDestory();
+        IbLogiDestroy();
         break;
     }
     return TRUE;
