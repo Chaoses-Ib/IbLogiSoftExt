@@ -4,7 +4,7 @@
 #include <functional>
 #include <Detours/detours.h>
 #include <xmmintrin.h>
-#include "IbWinCppLib/WinCppLib.hpp"
+#include <IbWinCppLib/WinCppLib.hpp>
 
 using namespace std;
 using namespace ib;

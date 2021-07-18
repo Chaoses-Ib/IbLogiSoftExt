@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "driver.hpp"
-#include "../Injector/IbWinCppLib/WinCppLib.hpp"
+#include <IbWinCppLib/WinCppLib.hpp>
 #include "../Injector/helper.hpp"
 #include <sstream>
 

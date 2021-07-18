@@ -2,7 +2,7 @@
 #include <thread>
 #include <sstream>
 #include <optional>
-#include <Boost/di.hpp>
+#include <boost/di.hpp>
 #include <yaml-cpp/yaml.h>
 #include "ipc.hpp"
 #include "helper.hpp"
