@@ -24,9 +24,6 @@
     <ClInclude Include="helper.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="ipc.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -39,9 +36,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="helper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ipc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

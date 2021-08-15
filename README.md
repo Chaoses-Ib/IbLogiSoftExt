@@ -53,3 +53,6 @@ This project uses the following libraries:
 * [[Boost::ext].DI](https://github.com/boost-ext/di)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp)
 * [IbWinCppLib](https://github.com/Chaoses-Ib/IbWinCppLib)
+
+## See Also
+* [IbAhkSendLib](https://github.com/Chaoses-Ib/IbAhkSendLib)

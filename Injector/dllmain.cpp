@@ -4,7 +4,6 @@
 #include <optional>
 #include <boost/di.hpp>
 #include <yaml-cpp/yaml.h>
-#include "ipc.hpp"
 #include "helper.hpp"
 
 namespace di = boost::di;
@@ -190,7 +189,7 @@ public:
         }
 
         //Attach
-        Module LCore = *ModuleFactory::CurrentProcess();
+        Module LCore = ModuleFactory::CurrentProcess();
         LuaDispatchEvent = LCore.base.offset(0x71CC40);
         //DebugOutput(wstringstream() << LuaDispatchEvent);
         auto status = IbDetourAttach(&LuaDispatchEvent, LuaDispatchEventDetour);
@@ -199,7 +198,7 @@ public:
         EventFunc13_GButton = LCore.base.offset(0x80D410);
         IbDetourAttach(&EventFunc13_GButton, EventFunc13_GButtonDetour);
 
-        Module Qt5Core = *ModuleFactory::Find(L"Qt5Core.dll");
+        Module Qt5Core = ModuleFactory::Find(L"Qt5Core.dll");
         QString::utf16 = (decltype(QString::utf16))GetProcAddress(Qt5Core.handle, "?utf16@QString@@QEBAPEBGXZ");
         DebugOutput(wstringstream() << L"QString::utf16:" << QString::utf16);
 
@@ -214,8 +213,6 @@ public:
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         }
-
-        IpcStart();
     }
     ~LogitechMouseExt() {
         //IbDetourDetach(&LuaDispatchEvent, LuaDispatchEventDetour);
